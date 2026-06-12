@@ -81,4 +81,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingSection.classList.add('d-none');
         detailContainer.classList.add('d-none');
     }
+    // Add to Cart
+    addToCartBtn.addEventListener('click', () => {
+        const quantity = parseInt(quantityInput.value);
+
+        // Check if the quantity is a valid number and greater than 0
+        if (isNaN(quantity) || quantity <= 0) {
+            alert('Vui lòng nhập số lượng hợp lệ từ 1 trở lên!');
+            quantityInput.value = 1;
+            return;
+        }
+
+        // Call addToCart function defined in cart.js 
+        if (typeof addToCart === 'function') {
+            addToCart(currentProduct.id, quantity);
+        } else {
+            console.warn("Chưa nạp hoặc chưa định nghĩa hàm addToCart trong file cart.js!");
+        }
+    });
 });

@@ -1,75 +1,78 @@
-
-
-// 1. Global state variable to hold original product data fetched from the API 
+// 1. Global state variable to hold original product data fetched from the API
 let originalProducts = [];
+let displayedCount = 8;
+const ITEMS_PER_PAGE = 4;
+let currentFilteredList = [];
 
 // 2. Wait until the HTML Document is fully parsed and loaded before executing JS logic
-document.addEventListener('DOMContentLoaded', async () => {
-    // Acquire required DOM Elements
-    const productGrid = document.getElementById('product-grid');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const errorMessage = document.getElementById('error-message');
-    const categorySelect = document.getElementById('category-select');
-    const sortSelect = document.getElementById('sort-select');
-    const searchInput = document.getElementById('search-input');
+document.addEventListener("DOMContentLoaded", async () => {
+  // Acquire required DOM Elements
+  const productGrid = document.getElementById("product-grid");
+  const loadingSpinner = document.getElementById("loading-spinner");
+  const errorMessage = document.getElementById("error-message");
+  const categorySelect = document.getElementById("category-select");
+  const sortSelect = document.getElementById("sort-select");
+  const searchInput = document.getElementById("search-input");
+  const loadMoreContainer = document.getElementById("load-more-container");
+  const loadMoreBtn = document.getElementById("load-more-btn");
 
-    // Trigger the initial setup process for the Home Page
-    await initHomePage();
+  // Trigger the initial setup process for the Home Page
+  await initHomePage();
 
-    /** Main initialization function for the Home Page
-     */
-    async function initHomePage() {
-        try {
-            //Trigger loading state view
-            loadingSpinner.classList.remove('d-none');
-            productGrid.innerHTML = '';
-            errorMessage.classList.add('d-none');
+  /** Main initialization function for the Home Page
+   */
+  async function initHomePage() {
+    try {
+      //Trigger loading state view
+      loadingSpinner.classList.remove("d-none");
+      productGrid.innerHTML = "";
+      errorMessage.classList.add("d-none");
 
-            //Fetch product data and categories
-            const [products, categories] = await Promise.all([
-                getAllProducts(),
-                getCategories()
-            ]);
+      //Fetch product data and categories
+      const [products, categories] = await Promise.all([
+        getAllProducts(),
+        getCategories(),
+      ]);
 
-            // Save data to global state
-            originalProducts = products;
+      // Save data to global state
+      originalProducts = products;
+      currentFilteredList = products;
 
-            // Populate the Select drop-down toolbar with category lists
-            renderCategories(categories);
-
-            // Render initial product items layout onto the grid
-            renderProducts(originalProducts);
-
-        } catch (error) {
-            errorMessage.classList.remove('d-none');
-        } finally {
-            loadingSpinner.classList.add('d-none');
-        }
+      // Populate the Select drop-down toolbar with category lists
+      renderCategories(categories);
+      renderProducts(currentFilteredList.slice(0, displayedCount));
+      updateLoadMoreVisibility();
+    } catch (error) {
+      errorMessage.classList.remove("d-none");
+    } finally {
+      loadingSpinner.classList.add("d-none");
     }
+  }
 
-    /**Renders the product array into responsive HTML Card components (Bootstrap 5 layouts)
-     *  @param {Array} productsList 
-     */
-    function renderProducts(productsList) {
-        // Fallback UI block if no products match the query parameters or active filter conditions
-        if (productsList.length === 0) {
-            productGrid.innerHTML = `
+  /**Renders the product array into responsive HTML Card components (Bootstrap 5 layouts)
+   * @param {Array} productsList
+   */
+  function renderProducts(productsList) {
+    // Fallback UI block if no products match the query parameters or active filter conditions
+    if (productsList.length === 0) {
+      productGrid.innerHTML = `
                 <div class="col-12 text-center py-5">
                     <i class="bi bi-search text-muted fs-1"></i>
                     <p class="text-muted mt-2">No products found matching your criteria!</p>
                 </div>
             `;
-            return;
-        }
+      if (loadMoreContainer) loadMoreContainer.classList.add("d-none");
+      return;
+    }
 
-        // Loop through each item and create the dynamic element structures
-        const cardHTMLs = productsList.map(product => {
-            return `
+    // Loop through each item and create the dynamic element structures
+    const cardHTMLs = productsList.map((product) => {
+      return `
                 <div class="col">
                     <div class="card product-card">
-                        <div class="product-img-wrapper">
+                        <a href="product.html?id=${product.id}" class="product-img-wrapper">
                             <img src="${product.image}" class="product-img" alt="${product.title}">
-                        </div>
+                        </a>
                         <div class="product-body">
                             <h5 class="product-title" title="${product.title}">${product.title}</h5>
                             <div class="product-price">$${product.price.toFixed(2)}</div>
@@ -88,51 +91,88 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-        });
+    });
 
-        productGrid.innerHTML = cardHTMLs.join('');
-    }
+    productGrid.innerHTML = cardHTMLs.join("");
+  }
 
-    /**Appends dynamic data arrays into the category select drop-down field
+  /**Appends dynamic data arrays into the category select drop-down field
      @param {Array<string>} categoriesList
      */
-    function renderCategories(categoriesList) {
-        categoriesList.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category.charAt(0).toUpperCase() + category.slice(1); 
-            categorySelect.appendChild(option);
-        });
+  function renderCategories(categoriesList) {
+    categoriesList.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+      categorySelect.appendChild(option);
+    });
+  }
+
+  function applyFilterSearchAndSort() {
+    let filtered = [...originalProducts];
+
+    const keyword = searchInput.value.trim().toLowerCase();
+    if (keyword) {
+      filtered = filtered.filter((p) =>
+        p.title.toLowerCase().includes(keyword),
+      );
     }
 
-
-    function applyFilterSearchAndSort() {
-        let filtered = [...originalProducts];
-
-        const keyword = searchInput.value.trim().toLowerCase();
-        if (keyword) {
-            filtered = filtered.filter(p => p.title.toLowerCase().includes(keyword));
-        }
-
-        const selectedCategory = categorySelect.value;
-        if (selectedCategory !== 'all') {
-            filtered = filtered.filter(p => p.category === selectedCategory);
-        }
-
-        const sortType = sortSelect.value;
-        if (sortType === 'price-asc') {
-            filtered.sort((a, b) => a.price - b.price); 
-        } else if (sortType === 'price-desc') {
-            filtered.sort((a, b) => b.price - a.price); 
-        }
-
-        // Re-render the layout interface with the refined results list
-        renderProducts(filtered);
+    const selectedCategory = categorySelect.value;
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((p) => p.category === selectedCategory);
     }
 
-    // Attach real-time event tracking loops into the configuration filter controls
-    searchInput.addEventListener('input', applyFilterSearchAndSort);
-    categorySelect.addEventListener('change', applyFilterSearchAndSort);
-    sortSelect.addEventListener('change', applyFilterSearchAndSort);
+    const sortType = sortSelect.value;
+    if (sortType === "price-asc") {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (sortType === "price-desc") {
+      filtered.sort((a, b) => b.price - a.price);
+    }
 
+    currentFilteredList = filtered;
+    displayedCount = 8;
+
+    renderProducts(currentFilteredList.slice(0, displayedCount));
+    updateLoadMoreVisibility();
+  }
+
+  function updateLoadMoreVisibility() {
+    if (!loadMoreContainer) return;
+    if (displayedCount < currentFilteredList.length) {
+      loadMoreContainer.classList.remove("d-none");
+    } else {
+      loadMoreContainer.classList.add("d-none");
+    }
+  }
+
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", () => {
+      displayedCount += ITEMS_PER_PAGE;
+      renderProducts(currentFilteredList.slice(0, displayedCount));
+      updateLoadMoreVisibility();
+    });
+  }
+
+  // Attach real-time event tracking loops into the configuration filter controls
+  searchInput.addEventListener("input", applyFilterSearchAndSort);
+  categorySelect.addEventListener("change", applyFilterSearchAndSort);
+  sortSelect.addEventListener("change", applyFilterSearchAndSort);
+
+  productGrid.addEventListener("click", (event) => {
+    const clickTarget = event.target.closest(".add-to-cart-fast-btn");
+
+    if (clickTarget) {
+      const productId = clickTarget.getAttribute("data-id");
+
+      // Call addToCart function defined in cart.js
+      if (typeof addToCart === "function") {
+        addToCart(productId, 1);
+      } else {
+        console.warn(
+          "Chưa nạp hoặc chưa định nghĩa hàm addToCart trong file cart.js!",
+        );
+      }
+    }
+  });
 });
