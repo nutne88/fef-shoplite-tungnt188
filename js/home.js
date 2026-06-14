@@ -4,6 +4,14 @@ let displayedCount = 8;
 const ITEMS_PER_PAGE = 4;
 let currentFilteredList = [];
 
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
 // 2. Wait until the HTML Document is fully parsed and loaded before executing JS logic
 document.addEventListener("DOMContentLoaded", async () => {
   // Acquire required DOM Elements
@@ -154,24 +162,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Attach real-time event tracking loops into the configuration filter controls
-  searchInput.addEventListener("input", applyFilterSearchAndSort);
+  // Prevent multiple rapid calls
+  searchInput.addEventListener(
+    "input",
+    debounce(applyFilterSearchAndSort, 300),
+  );
   categorySelect.addEventListener("change", applyFilterSearchAndSort);
   sortSelect.addEventListener("change", applyFilterSearchAndSort);
 
+  // Event delegation
   productGrid.addEventListener("click", (event) => {
     const clickTarget = event.target.closest(".add-to-cart-fast-btn");
 
     if (clickTarget) {
       const productId = clickTarget.getAttribute("data-id");
 
-      // Call addToCart function defined in cart.js
       if (typeof addToCart === "function") {
         addToCart(productId, 1);
-      } else {
-        console.warn(
-          "Chưa nạp hoặc chưa định nghĩa hàm addToCart trong file cart.js!",
-        );
       }
     }
   });

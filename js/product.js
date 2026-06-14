@@ -1,5 +1,3 @@
-
-
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('id');
@@ -39,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             showErrorUI();
         } finally {
-            // Tắt biểu tượng loading
             loadingSection.classList.add('d-none');
         }
     }
@@ -56,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         detailImg.src = product.image;
         detailImg.alt = product.title;
         renderRatingStars(product.rating.rate);
-        ratingText.textContent = `(${product.rating.rate} từ ${product.rating.count} đánh giá)`;
+        ratingText.textContent = `(${product.rating.rate} from ${product.rating.count} reviews)`;
         detailContainer.classList.remove('d-none');
     }
 
@@ -81,22 +78,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingSection.classList.add('d-none');
         detailContainer.classList.add('d-none');
     }
+
     // Add to Cart
     addToCartBtn.addEventListener('click', () => {
         const quantity = parseInt(quantityInput.value);
 
-        // Check if the quantity is a valid number and greater than 0
         if (isNaN(quantity) || quantity <= 0) {
-            alert('Vui lòng nhập số lượng hợp lệ từ 1 trở lên!');
+            alert('Please enter a valid quantity (at least 1)!');
             quantityInput.value = 1;
             return;
         }
 
-        // Call addToCart function defined in cart.js 
         if (typeof addToCart === 'function') {
             addToCart(currentProduct.id, quantity);
-        } else {
-            console.warn("Chưa nạp hoặc chưa định nghĩa hàm addToCart trong file cart.js!");
         }
     });
 });
